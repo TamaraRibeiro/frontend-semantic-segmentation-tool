@@ -1,8 +1,10 @@
 import "./App.css";
 import { useEffect, useRef, useState } from "react";
 import { Canvas, Rect } from "fabric";
-import { Button } from "antd";
+import { Button, Slider, SliderSingleProps } from "antd";
 import UploadButton from "./components/upload";
+import RadioGroup from "./components/radio-group";
+import { BiExport } from "react-icons/bi";
 export default function App() {
   // create reference so fabric.js can interact with the DOM
   const canvasRef = useRef(null);
@@ -43,6 +45,10 @@ export default function App() {
     }
   };
 
+  const formatter: NonNullable<SliderSingleProps["tooltip"]>["formatter"] = (
+    value
+  ) => `${value}%`;
+
   return (
     <div className="bg-red-50/40 h-screen w-screen flex flex-col items-center justify-center p-4 space-y-6 text-center">
       <div className="bg-fuchsia-100/80 rounded-xl px-2 lg:px-6 py-4 w-full">
@@ -54,6 +60,12 @@ export default function App() {
         <div className="flex mx-auto items-center gap-2">
           <h3 className="lg:text-lg">Upload your image</h3>
           <UploadButton />
+        </div>
+        <div className="flex flex-col gap-2 items-center">
+          <RadioGroup />
+          <div className="w-72">
+            <Slider tooltip={{ formatter }} />
+          </div>
         </div>
         <div className="py-2 px-2 grid grid-cols-2 gap-2 lg:mx-auto">
           <Button onClick={addRectangle} style={{ borderColor: "#dab2ff" }}>
@@ -69,6 +81,11 @@ export default function App() {
             ref={canvasRef}
             className="rounded-md shadow-md border border-zinc-300"
           />
+        </div>
+        <div className="py-2 px-2 gap-2 lg:mx-auto w-full">
+          <Button iconPosition="end" icon={<BiExport />} style={{ borderColor: "#dab2ff" }}>
+            Export your annotations
+          </Button>
         </div>
       </div>
     </div>

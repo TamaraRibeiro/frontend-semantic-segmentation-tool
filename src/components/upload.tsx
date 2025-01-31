@@ -18,7 +18,7 @@ import { BiUpload } from "react-icons/bi";
 
 export default function UploadButton() {
   return (
-    <div className="flex items-center gap-2 px-3 py-1 border border-[#dab2ff] rounded-md cursor-pointer bg-white ease-in-out duration-300 text-sm hover:text-purple-600">
+    <div className="flex items-center gap-2 px-2 py-0.5 border border-[#dab2ff] rounded-md cursor-pointer bg-white ease-in-out duration-300 text-sm hover:text-purple-600">
       <p>Click to upload</p>
       <BiUpload />
     </div>
