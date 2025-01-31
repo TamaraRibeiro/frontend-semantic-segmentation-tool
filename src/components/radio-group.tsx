@@ -1,11 +1,8 @@
-import { useState } from "react";
-
 import type { RadioChangeEvent } from "antd";
 import { Flex, Radio } from "antd";
 import { PiPaintBrush, PiPolygon } from "react-icons/pi";
 
-export default function RadioGroup() {
-  const [value, setValue] = useState(1);
+export default function RadioGroup({value, setValue}: {value: number, setValue: React.Dispatch<React.SetStateAction<number>>}) {
 
   const onChange = (e: RadioChangeEvent) => {
     setValue(e.target.value);
