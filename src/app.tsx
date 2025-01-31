@@ -2,6 +2,7 @@ import "./App.css";
 import { useEffect, useRef, useState } from "react";
 import { Canvas, Rect } from "fabric";
 import { Button } from "antd";
+import UploadButton from "./components/upload";
 export default function App() {
   // create reference so fabric.js can interact with the DOM
   const canvasRef = useRef(null);
@@ -15,11 +16,9 @@ export default function App() {
       const newCanvas = new Canvas(canvasRef.current, {
         width: 350,
         height: 400,
+        // backgroundColor: "#fff",
       });
 
-      newCanvas.backgroundColor = "#fff";
-
-      // renderAll renders top canvas and secondary container canvas
       newCanvas.renderAll();
 
       setCanvas(newCanvas);
@@ -52,6 +51,10 @@ export default function App() {
         </h1>
       </div>
       <div className="bg-fuchsia-100/80 rounded-xl px-4 py-4 space-y-4 w-full h-full flex flex-col">
+        <div className="flex mx-auto items-center gap-2">
+          <h3 className="lg:text-lg">Upload your image</h3>
+          <UploadButton />
+        </div>
         <div className="py-2 px-2 grid grid-cols-2 gap-2 lg:mx-auto">
           <Button onClick={addRectangle} style={{ borderColor: "#dab2ff" }}>
             Rectangle
