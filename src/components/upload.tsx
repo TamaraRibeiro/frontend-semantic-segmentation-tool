@@ -1,26 +1,19 @@
-import { BiUpload } from "react-icons/bi";
+import { MdPhotoCameraBack } from "react-icons/md";
 
-// const props: UploadProps = {
-//   name: "file",
-//   action: "https://660d2bd96ddfa2943b33731c.mockapi.io/api/upload",
+function triggerImageInput(id: string) {
+  document.getElementById(id)?.click();
+}
 
-//   onChange(info) {
-//     if (info.file.status !== "uploading") {
-//       console.log(info.file, info.fileList);
-//     }
-//     if (info.file.status === "done") {
-//       message.success(`${info.file.name} file uploaded successfully`);
-//     } else if (info.file.status === "error") {
-//       message.error(`${info.file.name} file upload failed.`);
-//     }
-//   },
-// };
-
-export default function UploadButton() {
+export default function UploadButton({
+  uploadImage,
+}: {
+  uploadImage: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}) {
   return (
-    <div className="flex items-center gap-2 px-2 py-0.5 border border-[#dab2ff] rounded-md cursor-pointer bg-white ease-in-out duration-300 text-sm hover:text-purple-600">
-      <p>Click to upload</p>
-      <BiUpload />
+    <div onClick={() => triggerImageInput("upload-image")} className="flex items-center gap-2 border border-purple-400 px-4 py-1 text-sm bg-white rounded-md cursor-pointer transition ease-in-out duration-200 hover:text-purple-400">
+      <input id="upload-image" type="file" accept="image/*" onChange={uploadImage} hidden/>
+      Upload
+      <MdPhotoCameraBack />
     </div>
   );
 }
