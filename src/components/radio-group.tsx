@@ -1,6 +1,7 @@
 import type { RadioChangeEvent } from "antd";
 import { Flex, Radio } from "antd";
 import { PiPaintBrush, PiPolygon } from "react-icons/pi";
+import { RiClapperboardAiLine } from "react-icons/ri";
 
 export default function RadioGroup({
   optionToggleValue,
@@ -19,6 +20,20 @@ export default function RadioGroup({
       onChange={onChange}
       value={optionToggleValue}
       options={[
+        {
+          value: 0,
+          label: (
+            <Flex
+              gap={3}
+              justify="center"
+              align="center"
+              style={{ fontSize: "medium" }}
+            >
+              <RiClapperboardAiLine style={{ fontSize: 18 }} />
+              Canvas Mode
+            </Flex>
+          ),
+        },
         {
           value: 1,
           label: (
