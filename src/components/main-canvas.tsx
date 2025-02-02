@@ -178,11 +178,12 @@ export default function MainCanvas() {
       setPolygonPoints((prev) => [...prev, { x, y }]);
     },
     [
-      canvas,
       isPolygonMode,
+      canvas,
       polygonPoints,
-      startPoint,
       isNearStartPoint,
+      startPoint,
+      newColor,
       lines,
       circles,
     ]
@@ -274,6 +275,26 @@ export default function MainCanvas() {
     }
   }
 
+  const handleEraser = () => {
+    if (!canvas) return;
+
+    canvas.isDrawingMode = true; 
+    canvas.freeDrawingBrush = new PencilBrush(canvas);
+    canvas.freeDrawingBrush.color = "white";
+    canvas.freeDrawingBrush.width = 10;
+
+    const activeObject = canvas.getActiveObject();
+
+    if (activeObject) {
+      if (activeObject.type === "group" || activeObject.type === "polygon") {
+        canvas.remove(activeObject);
+        alert("Are you sure you want to delete this annotation?")
+      }
+      canvas.discardActiveObject();
+      canvas.renderAll();
+    }
+  };
+
   // slider formatter config
   const formatter: NonNullable<SliderSingleProps["tooltip"]>["formatter"] = (
     value
@@ -287,22 +308,23 @@ export default function MainCanvas() {
       </div>
       <div className="flex flex-col items-center gap-2">
         <div className="flex flex-col gap-2 lg:flex-row items-center">
-        <div className="flex gap-2 items-center justify-center">
-          <RadioGroup
-            optionToggleValue={optionToggleValue}
-            setOptionToggleValue={setOptionToggleValue}
-          />
-        </div>
-        <div className="flex items-center gap-4">
-          <LuEraser
-            className="cursor-pointer hover:text-purple-400 hover:scale-105 transition ease-in-out duration-200"
-            size={17}
-          />
-          <FaUndo
-            className="cursor-pointer hover:text-purple-400 hover:scale-105 transition ease-in-out duration-200"
-            size={13}
-          />
-        </div>
+          <div className="flex gap-2 items-center justify-center">
+            <RadioGroup
+              optionToggleValue={optionToggleValue}
+              setOptionToggleValue={setOptionToggleValue}
+            />
+          </div>
+          <div className="flex items-center gap-4">
+            <LuEraser
+              onClick={handleEraser}
+              className="cursor-pointer hover:text-purple-400 hover:scale-105 transition ease-in-out duration-200"
+              size={18}
+            />
+            <FaUndo
+              className="cursor-pointer hover:text-purple-400 hover:scale-105 transition ease-in-out duration-200"
+              size={14}
+            />
+          </div>
         </div>
         <div className="w-72">
           <Slider
