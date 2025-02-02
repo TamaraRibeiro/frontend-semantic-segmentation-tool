@@ -43,6 +43,9 @@ export default function MainCanvas() {
   const [lines, setLines] = useState<Line[]>([]);
   const [circles, setCircles] = useState<Circle[]>([]);
 
+  // create state to track actions
+  const [history, setHistory] = useState<string[]>([]);
+
   // initialize the fabric canvas
   useEffect(() => {
     // check if the fabric canvas has successfully initialized
@@ -240,6 +243,8 @@ export default function MainCanvas() {
     }
   }, [newColor, brushWidthValue, canvas]);
 
+  
+
   const handleBrushWidthSlider = (value: number) => {
     setBrushWidthValue(value);
   };
@@ -278,7 +283,7 @@ export default function MainCanvas() {
   const handleEraser = () => {
     if (!canvas) return;
 
-    canvas.isDrawingMode = true; 
+    canvas.isDrawingMode = true;
     canvas.freeDrawingBrush = new PencilBrush(canvas);
     canvas.freeDrawingBrush.color = "white";
     canvas.freeDrawingBrush.width = 10;
@@ -288,12 +293,26 @@ export default function MainCanvas() {
     if (activeObject) {
       if (activeObject.type === "group" || activeObject.type === "polygon") {
         canvas.remove(activeObject);
-        alert("Are you sure you want to delete this annotation?")
+        alert("Are you sure you want to delete this annotation?");
       }
       canvas.discardActiveObject();
       canvas.renderAll();
     }
   };
+
+  const handleUndo = () => {
+    if (!canvas) return;
+  
+    const objects = canvas.getObjects();
+    if (objects.length > 0) {
+      const lastObject = objects[objects.length - 1];
+      canvas.remove(lastObject);
+      canvas.renderAll();
+  
+      setHistory((prevHistory) => prevHistory.slice(0, -1));
+    }
+  };
+
 
   // slider formatter config
   const formatter: NonNullable<SliderSingleProps["tooltip"]>["formatter"] = (
@@ -321,6 +340,7 @@ export default function MainCanvas() {
               size={18}
             />
             <FaUndo
+              onClick={handleUndo}
               className="cursor-pointer hover:text-purple-400 hover:scale-105 transition ease-in-out duration-200"
               size={14}
             />
