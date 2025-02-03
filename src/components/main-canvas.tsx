@@ -3,12 +3,9 @@ import {
   Canvas,
   Circle,
   FabricImage,
-  FabricObject,
   Group,
   Line,
-  Path,
   PencilBrush,
-  Point,
   Polygon,
   TPointerEvent,
   TPointerEventInfo,
@@ -20,7 +17,7 @@ import { FaUndo } from "react-icons/fa";
 import UploadButton from "./upload";
 import RadioGroup from "./radio-group";
 import Class from "./class";
-import { ClassProps, COCOAnnotation } from "../types/types";
+import { ClassProps } from "../types/types";
 
 export default function MainCanvas() {
   // create reference so fabric.js can interact with the DOM
@@ -53,6 +50,7 @@ export default function MainCanvas() {
   // create state to track actions
   const [history, setHistory] = useState<string[]>([]);
 
+  // create state to handle classes names
   const [classes, setClasses] = useState<ClassProps[]>([]);
 
   // initialize the fabric canvas
@@ -364,8 +362,8 @@ export default function MainCanvas() {
   };
 
   const exportAnnotations = () => {
-    alert("Future implementation")
-  }
+    alert("Future implementation");
+  };
 
   return (
     <div className="bg-fuchsia-100/80 rounded-xl px-4 py-4 space-y-4 w-full h-full flex flex-col">
@@ -382,7 +380,7 @@ export default function MainCanvas() {
             />
           </div>
           <div className="flex items-center gap-4">
-          <Tooltip
+            <Tooltip
               trigger={["hover"]}
               title="Delete object"
               placement="top"
@@ -426,7 +424,6 @@ export default function MainCanvas() {
                 <FaUndo size={14} />
               </Button>
             </Tooltip>
-            
           </div>
         </div>
         <div className={"flex gap-1 items-center text-zinc-700"}>
