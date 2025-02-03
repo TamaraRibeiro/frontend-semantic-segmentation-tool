@@ -67,7 +67,7 @@ export default function Class({
         <Button
           className="w-36"
           onClick={handleAddClass}
-          style={{ borderColor: "#dab2ff" }}
+          style={{ borderColor: "#dab2ff", color: "#dab2ff" }}
         >
           Save Class
         </Button>
