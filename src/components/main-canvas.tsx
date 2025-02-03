@@ -3,20 +3,25 @@ import {
   Canvas,
   Circle,
   FabricImage,
+  FabricObject,
   Group,
   Line,
+  Path,
   PencilBrush,
+  Point,
   Polygon,
   TPointerEvent,
   TPointerEventInfo,
 } from "fabric";
-import { Button, Slider, SliderSingleProps } from "antd";
+import { Button, Slider, SliderSingleProps, Tooltip } from "antd";
 import { BiExport } from "react-icons/bi";
 import { LuEraser } from "react-icons/lu";
 import { FaUndo } from "react-icons/fa";
 import UploadButton from "./upload";
 import RadioGroup from "./radio-group";
 import Class from "./class";
+import { ClassProps, COCOAnnotation } from "../types/types";
+
 export default function MainCanvas() {
   // create reference so fabric.js can interact with the DOM
   const canvasRef = useRef<Canvas | null>(null);
@@ -45,6 +50,8 @@ export default function MainCanvas() {
 
   // create state to track actions
   const [history, setHistory] = useState<string[]>([]);
+
+  const [classes, setClasses] = useState<ClassProps[]>([]);
 
   // initialize the fabric canvas
   useEffect(() => {
@@ -243,8 +250,6 @@ export default function MainCanvas() {
     }
   }, [newColor, brushWidthValue, canvas]);
 
-  
-
   const handleBrushWidthSlider = (value: number) => {
     setBrushWidthValue(value);
   };
@@ -302,22 +307,286 @@ export default function MainCanvas() {
 
   const handleUndo = () => {
     if (!canvas) return;
-  
+
     const objects = canvas.getObjects();
     if (objects.length > 0) {
       const lastObject = objects[objects.length - 1];
       canvas.remove(lastObject);
       canvas.renderAll();
-  
+
       setHistory((prevHistory) => prevHistory.slice(0, -1));
     }
   };
-
 
   // slider formatter config
   const formatter: NonNullable<SliderSingleProps["tooltip"]>["formatter"] = (
     value
   ) => `${value}%`;
+
+  const onAddClass = (name: string, color: string) => {
+    if (
+      classes.some((item) => item.color.toLowerCase() === color.toLowerCase())
+    ) {
+      alert(
+        "This color is already used by another class. Please choose a different color."
+      );
+      return;
+    }
+    const newClassCategory = { id: classes.length + 1, name, color };
+    setClasses([...classes, newClassCategory]);
+  };
+
+  function pointInPolygon(
+    x: number,
+    y: number,
+    poly: { x: number; y: number }[]
+  ): boolean {
+    let inside = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const xi = poly[i].x,
+        yi = poly[i].y;
+      const xj = poly[j].x,
+        yj = poly[j].y;
+      const intersect =
+        yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
+      if (intersect) inside = !inside;
+    }
+    return inside;
+  }
+
+  const exportAnnotations = () => {
+    if (!canvas) {
+      alert("Canvas not initialized!");
+      return;
+    }
+
+    const canvasWidth = canvas.getWidth();
+    const canvasHeight = canvas.getHeight();
+    const image_id = 1; // In this example we export one image.
+    let annotationId = 1;
+
+    // Declare arrays with our explicit type.
+    const polygonAnnotations: COCOAnnotation[] = [];
+    const brushAnnotations: COCOAnnotation[] = [];
+
+    // 1. Process polygon annotations (from finished polygon mode).
+    canvas.getObjects().forEach((obj) => {
+      if (obj.type === "group") {
+        // Find the polygon inside the group.
+        const groupObj = obj as Group;
+        const polygonObj = groupObj
+          .getObjects()
+          .find((o: FabricObject) => o.type === "polygon") as
+          | Polygon
+          | undefined;
+        if (!polygonObj) return;
+
+        // Get the absolute transformation matrix of the group.
+        const groupMatrix = obj.calcTransformMatrix();
+
+        // Transform each of the polygon’s relative points using Fabric’s utility.
+        const absolutePoints: Point[] = polygonObj.points.map(
+          (pt: { x: number; y: number }) => {
+            const relativePoint = new Point(pt.x, pt.y);
+            return relativePoint.transform(groupMatrix);
+          }
+        );
+
+        // Build a flat segmentation array for COCO format.
+        // COCO expects an array of polygons (each polygon is an array of numbers).
+        const segmentation = [
+          absolutePoints.reduce(
+            (acc: number[], pt: Point) => acc.concat([pt.x, pt.y]),
+            []
+          ),
+        ];
+
+        // Use Fabric’s getBoundingRect() to compute the bounding box.
+        const rect = obj.getBoundingRect();
+        const bbox: [number, number, number, number] = [
+          rect.left,
+          rect.top,
+          rect.width,
+          rect.height,
+        ];
+
+        // Compute the polygon area using the shoelace formula.
+        let area = 0;
+        for (let i = 0; i < absolutePoints.length; i++) {
+          const j = (i + 1) % absolutePoints.length;
+          area +=
+            absolutePoints[i].x * absolutePoints[j].y -
+            absolutePoints[j].x * absolutePoints[i].y;
+        }
+        area = Math.abs(area / 2);
+
+        // Look up the class based on the polygon’s stroke color.
+        const strokeColor = polygonObj.stroke as string;
+        const category = classes.find(
+          (c) => c.color.toLowerCase() === strokeColor.toLowerCase()
+        );
+        if (!category) {
+          alert(
+            "An annotation with stroke color " +
+              strokeColor +
+              " does not match any class."
+          );
+          return;
+        }
+
+        polygonAnnotations.push({
+          id: annotationId,
+          image_id: image_id,
+          category_id: category.id,
+          segmentation: segmentation,
+          bbox: bbox,
+          area: area,
+          iscrowd: 0,
+          annotation_type: "polygon",
+        });
+        annotationId++;
+      }
+    });
+
+    // 2. Process brush (free-drawing) annotations.
+    // These objects are of type "path".
+    canvas.getObjects().forEach((obj) => {
+      if (obj.type === "path") {
+        // Cast the generic object to fabric.Path so TypeScript recognizes the 'path' property.
+        const pathObj = obj as Path;
+
+        // Get the bounding rectangle and center point.
+        const rect = pathObj.getBoundingRect();
+        const bbox: [number, number, number, number] = [
+          rect.left,
+          rect.top,
+          rect.width,
+          rect.height,
+        ];
+        const area = rect.width * rect.height; // approximate area
+        const center = pathObj.getCenterPoint();
+
+        // Lookup the class by the stroke color.
+        const strokeColor = pathObj.stroke as string;
+        const category = classes.find(
+          (c) => c.color.toLowerCase() === strokeColor.toLowerCase()
+        );
+        if (!category) {
+          alert(
+            "A brush annotation with stroke color " +
+              strokeColor +
+              " does not match any class."
+          );
+          return;
+        }
+
+        brushAnnotations.push({
+          id: annotationId,
+          image_id: image_id,
+          category_id: category.id,
+          segmentation: [], // No segmentation for free-draw strokes.
+          bbox: bbox,
+          area: area,
+          iscrowd: 0,
+          annotation_type: "brush",
+          brush: {
+            color: strokeColor,
+            width: pathObj.strokeWidth,
+            // TypeScript now knows that pathObj.path exists.
+            path: pathObj.path,
+            center: { x: center.x, y: center.y },
+          },
+        });
+        annotationId++;
+      }
+    });
+
+    // 3. (Optional) Overlap Check for polygon annotations.
+    const mask = new Uint8Array(canvasWidth * canvasHeight);
+    let overlapFound = false;
+
+    polygonAnnotations.forEach((ann) => {
+      // Convert the segmentation flat list into an array of points.
+      const seg = ann.segmentation[0];
+      const polyPoints: { x: number; y: number }[] = [];
+      for (let i = 0; i < seg.length; i += 2) {
+        polyPoints.push({ x: seg[i], y: seg[i + 1] });
+      }
+
+      // Compute a bounding box from the segmentation points.
+      const xs = polyPoints.map((p) => p.x);
+      const ys = polyPoints.map((p) => p.y);
+      const minX = Math.floor(Math.min(...xs));
+      const minY = Math.floor(Math.min(...ys));
+      const maxX = Math.ceil(Math.max(...xs));
+      const maxY = Math.ceil(Math.max(...ys));
+
+      // For each pixel in the bounding box, test if its center is inside the polygon.
+      for (let y = minY; y < maxY; y++) {
+        for (let x = minX; x < maxX; x++) {
+          if (pointInPolygon(x + 0.5, y + 0.5, polyPoints)) {
+            const idx = y * canvasWidth + x;
+            if (mask[idx] !== 0) {
+              overlapFound = true;
+              break;
+            } else {
+              mask[idx] = ann.category_id;
+            }
+          }
+        }
+        if (overlapFound) break;
+      }
+    });
+
+    if (overlapFound) {
+      alert(
+        "Overlap detected: one or more pixels are assigned to more than one class. " +
+          "Please adjust your annotations and try again."
+      );
+      return;
+    }
+
+    // 4. Build the final COCO-format JSON.
+    // Retrieve the background image source by casting the backgroundImage.
+    const bgSrc =
+      canvas.backgroundImage &&
+      (canvas.backgroundImage as FabricImage).get("src")
+        ? (canvas.backgroundImage as FabricImage).get("src")
+        : "no_image";
+
+    const allAnnotations: COCOAnnotation[] =
+      polygonAnnotations.concat(brushAnnotations);
+
+    const cocoData = {
+      images: [
+        {
+          id: image_id,
+          width: canvasWidth,
+          height: canvasHeight,
+          file_name: bgSrc,
+        },
+      ],
+      annotations: allAnnotations,
+      categories: classes.map((c) => ({
+        id: c.id,
+        name: c.name,
+        color: c.color, // Custom field for color.
+        supercategory: "none",
+      })),
+    };
+
+    // 5. Trigger the download of the JSON file.
+    const jsonStr = JSON.stringify(cocoData, null, 2);
+    const blob = new Blob([jsonStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "annotations.json";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    console.log(jsonStr);
+  };
 
   return (
     <div className="bg-fuchsia-100/80 rounded-xl px-4 py-4 space-y-4 w-full h-full flex flex-col">
@@ -334,31 +603,50 @@ export default function MainCanvas() {
             />
           </div>
           <div className="flex items-center gap-4">
+            <Tooltip
+              trigger={["hover"]}
+              title="Eraser"
+              placement="top"
+              id="eraser-tooltip"
+            >
             <LuEraser
               onClick={handleEraser}
               className="cursor-pointer hover:text-purple-400 hover:scale-105 transition ease-in-out duration-200"
               size={18}
-            />
+            /></Tooltip>
+            <Tooltip
+              trigger={["hover"]}
+              title="Undo"
+              placement="top"
+              id="undo-tooltip"
+            >
             <FaUndo
               onClick={handleUndo}
               className="cursor-pointer hover:text-purple-400 hover:scale-105 transition ease-in-out duration-200"
               size={14}
+            /></Tooltip>
+          </div>
+        </div>
+        <div className={"flex gap-1 items-center text-zinc-700"}>
+          <p className="">Brush width</p>
+          <div className="w-72 mt-1">
+            <Slider
+              onChange={handleBrushWidthSlider}
+              disabled={optionToggleValue !== 1}
+              tooltip={{ formatter }}
+              value={brushWidthValue}
+              min={1}
+              max={100}
             />
           </div>
         </div>
-        <div className="w-72">
-          <Slider
-            onChange={handleBrushWidthSlider}
-            disabled={optionToggleValue !== 1}
-            tooltip={{ formatter }}
-            value={brushWidthValue}
-            min={1}
-            max={100}
-          />
-        </div>
       </div>
 
-      <Class newColor={newColor} setNewColor={setNewColor} />
+      <Class
+        newColor={newColor}
+        setNewColor={setNewColor}
+        onAddClass={onAddClass}
+      />
 
       <div className="flex justify-center w-full">
         <canvas
@@ -372,6 +660,7 @@ export default function MainCanvas() {
           iconPosition="end"
           icon={<BiExport />}
           style={{ borderColor: "#dab2ff" }}
+          onClick={exportAnnotations}
         >
           Export your annotations
         </Button>

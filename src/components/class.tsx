@@ -50,12 +50,18 @@ export default function Class({
       
       <Flex className="items-center justify-end gap-2">
         <p>Color:</p>
+        <Tooltip
+              trigger={["hover"]}
+              title="Color"
+              placement="topLeft"
+              id="undo-tooltip"
+            >
         <ColorPicker
           onChange={(_, hex) => handleSetColor(hex)}
           value={newColor}
           showText
           allowClear
-        />
+        /></Tooltip>
       </Flex>
       <Flex className="items-center justify-end lg:justify-start">
         <Button
